@@ -1,8 +1,8 @@
 from data import arr
-# from model import connect_to_db, db
-# from server import app
-# from model import Tile
-# from model import Point
+from model import connect_to_db, db
+from server import app
+from model import Tile
+from model import Point
 import numpy as np
 prac = arr[0:6, 0:3]
 #longitude (west is base)
@@ -64,7 +64,7 @@ def localMax(tile_arr, base_lat, base_lng, tile_id):
     max_index = np.argmax(tile_arr)
     y = max_index // side_x
     x = max_index % side_x
-    elevation = tile_arr[y, x]
+    elevation = float(tile_arr[y, x])
     latitude = ((y+1) * v_step) + base_lat
     longitude = ((x+1) * h_step) + base_lng
     point = Point(tile_id=tile_id, latitude=latitude, longitude=longitude, elevation=elevation)
@@ -90,11 +90,11 @@ def localMax(tile_arr, base_lat, base_lng, tile_id):
 
 #     db.session.commit()
 
-# if __name__ == "__main__":
-#     connect_to_db(app)
+if __name__ == "__main__":
+    connect_to_db(app)
 
-#     # In case tables haven't been created, create them
-#     db.create_all()
+    # In case tables haven't been created, create them
+    db.create_all()
 
-#     # Import different types of data
-#     load_tiles()
+    # Import different types of data
+    tileit(incr, incr, steps, steps, North_B, West_B)

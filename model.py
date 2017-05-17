@@ -47,16 +47,16 @@ class Point(db.Model):
     def __repr__(self):
         """Provide helpful information when printed"""
 
-        return "<Point is in: tile_id=%s latitude=%s longitude=%s elevation%s>" % (self.tile_id,
+        return "<Point is in: tile_id=%s latitude=%s longitude=%s elevation=%s>" % (self.tile_id,
                                                                                    self.latitude,
                                                                                    self.longitude,
                                                                                    self.elevation)
 
 
-def connect_to_db(app):
+def connect_to_db(app, db_url='postgresql:///mvp'):
     """Connect the database to our Flask app."""
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///testtiles'
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.app = app
     db.init_app(app)

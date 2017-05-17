@@ -6,5 +6,3 @@ arr = geo.ReadAsArray()
 print repr(arr)
 
 np.save("data.npy", arr)
-
-

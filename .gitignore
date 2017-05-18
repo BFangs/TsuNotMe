@@ -2,7 +2,7 @@
 *.pyc
 *.dmg
 /source_data
-home*
 .DS*
 *.npy
 *.img
+*secret*

@@ -3,6 +3,9 @@ from flask import (Flask, render_template, redirect, request,
                    flash, session, jsonify)
 from flask_debugtoolbar import DebugToolbarExtension
 from model import Tile, Point, connect_to_db, db
+from data import tile_query
+import numpy as np
+
 import os
 API_KEY = os.environ['googlekey']
 
@@ -17,10 +20,19 @@ def home():
 
     return render_template("homepage.html", API_KEY=API_KEY)
 
-@app.route('/start')
-def pick_location():
-    """not sure if this needs a route yet"""
-    pass
+@app.route('/start.json')
+def get_points():
+    """ajax call querying location"""
+
+    latitude = float(request.args.get("latitude"))
+    longitude = float(request.args.get("longitude"))
+    point_list = tile_query(latitude, longitude)
+    top_point = point_list[0]
+    answer = {"tile_id": top_point[0],
+              "latitude": top_point[1],
+              "longitude": top_point[2],
+              "elevation": top_point[3]}
+    return jsonify(answer)
 
 
 if __name__ == "__main__":

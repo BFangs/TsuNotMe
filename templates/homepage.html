@@ -7,36 +7,32 @@
 </div>
 <div>
 <h2>START LOCATION</h2>
-<form class="form-inline" id='location-form'>
-  <div class="form-group">
-    <label for="InputName">Location Name</label>
-    <input type="text" class="form-control" id="InputName" placeholder="Hackbright">
-  </div>
-  <div class="form-group">
-    <label for="InputAddress">Enter Address:</label>
-    <input type="text" class="form-control" id="InputAddress" placeholder="683 Sutter St, San Francisco, CA, 94109">
-  </div>
-  <button type="submit" class="btn btn-default">Pick Location!</button>
-</form>
 </div>
-<div>
+<div id="escape-story">
 <h2>ESCAPE</h2>
 <button type="button" id="LocationPicker">I Picked My Location!</button>
+</div>
+<div id="floating-panel">
+    <input id="address" type="textbox" value="Hackbright">
+    <input id="geo-submit" type="button" value="Set Marker!">
 </div>
 <div id='google_map'></div>
 <script src="https://code.jquery.com/jquery.js"></script>
 <script>
     var map;
     var San_Francisco = {lat: 37.7749, lng: -122.4194};
-    var drop_marker;
-    var marker_lat;
-    var marker_lng;
+    var start_marker;
+    var start_lat;
+    var start_lng;
+    var end_marker;
+    var end_lat;
+    var end_lng;
     function initMap() {
         map = new google.maps.Map(document.getElementById('google_map'), {
             center: San_Francisco,
             zoom: 12
         });
-        drop_marker = new google.maps.Marker({
+        start_marker = new google.maps.Marker({
             position: San_Francisco,
             draggable: true,
             map: map,
@@ -45,22 +41,51 @@
         google.maps.event.addListener(map, 'click', function(event) {
             updateMarker(event.latLng);
         });
-        drop_marker.addListener('dragend', function(event) {
+        start_marker.addListener('dragend', function(event) {
             updateLocation();
         });
         updateLocation();
+        var geocoder = new google.maps.Geocoder();
+
+        document.getElementById('geo-submit').addEventListener('click', function() {
+          geocodeAddress(geocoder, map);
+        });
     }
     function updateLocation(){
-        marker_lat = drop_marker.getPosition().lat();
-        marker_lng = drop_marker.getPosition().lng();
-        console.log(marker_lat, marker_lng);
+        start_lat = start_marker.getPosition().lat();
+        start_lng = start_marker.getPosition().lng();
+        console.log(start_lat, start_lng);
     }
     function updateMarker(data){
-        drop_marker.setPosition(data);
+        start_marker.setPosition(data);
         updateLocation();
     }
-    $('#LocationPicker').click(updateLocation);
-    $('#location-form').submit(updateMarker);
+    function geocodeAddress(geocoder, map) {
+        var address = document.getElementById('address').value;
+        geocoder.geocode({'address': address}, function(results, status) {
+            if (status === 'OK') {
+                map.setCenter(results[0].geometry.location);
+                updateMarker(results[0].geometry.location)
+            } else {
+                alert('Geocode was not successful for the following reason: ' + status);
+            }
+        });
+    }
+    function showPoints(results) {
+        console.dir(results);
+        $("#escape-story").html("<p>the user is in tile: "+results["tile_id"]+"</p>");
+        $("#escape-story").html("<p>The nearest high point is at lat: "+results["latitude"]+"long: "+results["longitude"]+"elevation: "+results["elevation"]+"</p>");
+        $("#escape-story").html("<p>What will happen to you?</p>");
+    }
+    function getPoints(evt) {
+        evt.preventDefault();
+        var formInputs = {
+            "latitude": start_lat,
+            "longitude": start_lng,
+        };
+        $.get("/start.json", formInputs, showPoints);
+    }
+    $("#LocationPicker").on("click", getPoints);
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ API_KEY }}&callback=initMap" async defer></script>
 

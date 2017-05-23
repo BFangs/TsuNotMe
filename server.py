@@ -27,6 +27,7 @@ def get_points():
     latitude = float(request.args.get("latitude"))
     longitude = float(request.args.get("longitude"))
     point_list = tile_query(latitude, longitude)
+    # need to change this when I change algorithm to query multiple points
     top_point = point_list[0]
     answer = {"tile_id": top_point[0],
               "latitude": top_point[1],

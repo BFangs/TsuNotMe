@@ -31,6 +31,42 @@ def tile_query(lat, lng):
     return point_list
 
 
+def how_many_dupe_tiles():
+    """looking for duplicate tile bounds"""
+
+    tile_list = []
+    tile_objects = Tile.query.all()
+    for tile in tile_objects:
+        tile_list.append((tile.bottom_bound, tile.top_bound, tile.left_bound, tile.right_bound))
+    # import pdb; pdb.set_trace()
+    tile_set = set(tile_list)
+    print "list length: %s set length: %s" % (len(tile_list), len(tile_set))
+    if len(tile_list) != len(tile_set):
+        return "You've got duplicates!"
+    else:
+        return "Seems fine"
+
+def which_tiles_duped():
+    """looking for tile objects with duplicate tile bounds"""
+
+    tile_list = []
+    tile_objects = Tile.query.all()
+    for tile in tile_objects:
+        tile_list.append((tile.bottom_bound, tile.top_bound, tile.left_bound, tile.right_bound))
+    tiles_count = {}
+    for tile in tile_list:
+        if tile in tiles_count:
+            return tile
+        else:
+            tiles_count[tile] = 1
+
+
+def is_total_area_correct():
+    """calculate area of all tiles and add together, is it same as whole data set?"""
+
+    pass
+
+
 def get_rows(raw_data, position, steps, increment, base_lat, lat_step):
     """splitting total array into rows and returns top and bottom bounds"""
 
@@ -43,7 +79,7 @@ def get_rows(raw_data, position, steps, increment, base_lat, lat_step):
         row = raw_data[position: steps_y]
         top_bound = base_lat + (position * lat_step)
         bottom_bound = top_bound + ((steps_y-position) * lat_step)
-    print row, top_bound, bottom_bound, position
+    # print (top_bound, bottom_bound)
     return (top_bound, bottom_bound, row)
 
 
@@ -59,7 +95,6 @@ def get_tiles(row, position, steps, increment, base_lng, lng_step):
         tile = row[:, position: steps]
         left_bound = base_lng + (position * lng_step)
         right_bound = left_bound + ((steps-position) * lng_step)
-    print tile, left_bound, right_bound, position
     return (left_bound, right_bound, tile)
 
 

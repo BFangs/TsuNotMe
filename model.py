@@ -24,7 +24,7 @@ class Tile(db.Model):
     def __repr__(self):
         """Provide helpful information when printed"""
 
-        return "<tile_id=%s covers location: N=%s E=%s S=%s W=%s" % (self.tile_id,
+        return "<tile_id=%s covers location: N=%s E=%s S=%s W=%s>" % (self.tile_id,
                                                                      self.top_bound,
                                                                      self.right_bound,
                                                                      self.bottom_bound,

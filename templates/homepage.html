@@ -27,7 +27,11 @@
     var end_marker;
     var end_lat;
     var end_lng;
+    var directionsDisplay;
+    var directionsService;
     function initMap() {
+        directionsDisplay = new google.maps.DirectionsRenderer();
+        directionsService = new google.maps.DirectionsService();
         map = new google.maps.Map(document.getElementById('google_map'), {
             center: San_Francisco,
             zoom: 12
@@ -37,6 +41,13 @@
             draggable: true,
             map: map,
             title: 'BOOP'
+        });
+        end_marker = new google.maps.Marker({
+            position: San_Francisco,
+            draggable: false,
+            map: map,
+            visible: false,
+            title: 'ESCAPE!'
         });
         google.maps.event.addListener(map, 'click', function(event) {
             updateMarker(event.latLng);
@@ -65,17 +76,42 @@
         geocoder.geocode({'address': address}, function(results, status) {
             if (status === 'OK') {
                 map.setCenter(results[0].geometry.location);
-                updateMarker(results[0].geometry.location)
+                updateMarker(results[0].geometry.location);
             } else {
                 alert('Geocode was not successful for the following reason: ' + status);
             }
         });
     }
+    function endMarker(latitude, longitude) {
+        end_marker.setPosition({lat: latitude, lng: longitude});
+        end_marker.setOptions({visible:true});
+    }
+    function calcRoute() {
+        console.log(start_lat, start_lng, end_marker.getPosition().lat(), end_marker.getPosition().lng())
+        var request = {
+            origin: {lat: start_lat, lng: start_lng},
+            destination: {lat: end_marker.getPosition().lat(), lng: end_marker.getPosition().lng()},
+            travelMode: 'WALKING'
+        };
+        directionsService.route(request, function(result, status) {
+            if (status == 'OK') {
+                console.dir(request)
+                directionsDisplay.setDirections(result);
+            } else {
+                console.log("direction services failed")
+            }
+        });
+    }
     function showPoints(results) {
         console.dir(results);
-        $("#escape-story").html("<p>the user is in tile: "+results["tile_id"]+"</p>");
-        $("#escape-story").html("<p>The nearest high point is at lat: "+results["latitude"]+"long: "+results["longitude"]+"elevation: "+results["elevation"]+"</p>");
-        $("#escape-story").html("<p>What will happen to you?</p>");
+        lat = results["latitude"]
+        lng = results["longitude"]
+        endMarker(lat, lng)
+        console.log(results["elevation"].toString())
+        $("#escape-story").append("<p>the user is in tile: "+results["tile_id"].toString()+"</p>");
+        $("#escape-story").append("<p>The nearest high point is at lat: "+results["latitude"].toString()+" long: "+results["longitude"].toString()+" elevation: "+results["elevation"].toString()+"</p>");
+        $("#escape-story").append("<p>What will happen to you?</p>");
+        calcRoute()
     }
     function getPoints(evt) {
         evt.preventDefault();

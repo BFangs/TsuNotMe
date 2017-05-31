@@ -2,35 +2,47 @@
 {% block content %}
 
 <h1>TsuNotMe</h1>
+
+<div id="escape-story"></div>
 <div>
-<h2>WAVE</h2>
-</div>
-<div>
-<h2>START LOCATION</h2>
-</div>
-<div id="escape-story">
-<h2>ESCAPE</h2>
-<button type="button" id="LocationPicker">I Picked My Location!</button>
-</div>
-<div id="floating-panel">
+<form class="form-inline">
+  <div class="form-group">
+    <label class="sr-only" for="geocoder">Enter Address:</label>
     <input id="address" type="textbox" value="Hackbright">
     <input id="geo-submit" type="button" value="Set Marker!">
+</form>
+<form class="form-inline" id="LocationPicker">
+  <div class="form-group">
+    <label class="sr-only" for="elevationThreshold">Elevation Threshold:</label>
+    <input type="number" class="form-control" id="elevationThreshold" placeholder="### meters">
+  </div>
+  <div class="form-group">
+    <label class="sr-only" for="timeThreshold">Time Threshold:</label>
+    <input type="number" class="form-control" id="timeThreshold" placeholder="Tic Toc">
+  </div>
+    <select class="form-control" id="travelModes">
+      <option value="WALKING">walking</option>
+      <option value="DRIVING">driving</option>
+      <option value="BICYCLING">biking</option>
+      <option value="TRANSIT">transit</option>
+    </select>
+  <button type="submit" class="btn btn-default">Reveal Path!</button>
+</form>
 </div>
-<div id='google_map'></div>
+<div><div id='google_map'></div><div id="directionsPanel"></div></div>
+
 <script src="https://code.jquery.com/jquery.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script>
     var map;
     var San_Francisco = {lat: 37.7749, lng: -122.4194};
     var start_marker;
-    var start_lat;
-    var start_lng;
     var end_marker;
-    var end_lat;
-    var end_lng;
     var directionsDisplay;
     var directionsService;
+    var endMarkerArray = [];
     function initMap() {
-        directionsDisplay = new google.maps.DirectionsRenderer();
         directionsService = new google.maps.DirectionsService();
         map = new google.maps.Map(document.getElementById('google_map'), {
             center: San_Francisco,
@@ -51,25 +63,21 @@
         });
         google.maps.event.addListener(map, 'click', function(event) {
             updateMarker(event.latLng);
+            start_marker.setOptions({visible:true});
         });
-        start_marker.addListener('dragend', function(event) {
-            updateLocation();
-        });
-        updateLocation();
         var geocoder = new google.maps.Geocoder();
-
+        var elevator = new google.maps.ElevationService;
         document.getElementById('geo-submit').addEventListener('click', function() {
           geocodeAddress(geocoder, map);
+          start_marker.setOptions({visible:true});
         });
-    }
-    function updateLocation(){
-        start_lat = start_marker.getPosition().lat();
-        start_lng = start_marker.getPosition().lng();
-        console.log(start_lat, start_lng);
-    }
+        var rendererOptions = {
+            map: map
+        }
+        directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions)
+        }
     function updateMarker(data){
         start_marker.setPosition(data);
-        updateLocation();
     }
     function geocodeAddress(geocoder, map) {
         var address = document.getElementById('address').value;
@@ -78,19 +86,23 @@
                 map.setCenter(results[0].geometry.location);
                 updateMarker(results[0].geometry.location);
             } else {
-                alert('Geocode was not successful for the following reason: ' + status);
+                $("#messageBody").html('Geocode was not successful for the following reason: ' + status);
+                $('#messageModal').modal("show");
             }
         });
     }
     function endMarker(latitude, longitude) {
         end_marker.setPosition({lat: latitude, lng: longitude});
-        end_marker.setOptions({visible:true});
     }
     function calcRoute() {
-        console.log(start_lat, start_lng, end_marker.getPosition().lat(), end_marker.getPosition().lng())
+        console.log(start_marker.getPosition().lat(), start_marker.getPosition().lng(), end_marker.getPosition().lat(), end_marker.getPosition().lng());
+        for (i = 0; i < markerArray.length; i++) {
+            markerArray[i].setMap(null);
+        }
         var request = {
-            origin: {lat: start_lat, lng: start_lng},
+            origin: {lat: start_marker.getPosition().lat(), lng: start_marker.getPosition().lng()},
             destination: {lat: end_marker.getPosition().lat(), lng: end_marker.getPosition().lng()},
+            provideRouteAlternatives: true,
             travelMode: 'WALKING'
         };
         directionsService.route(request, function(result, status) {
@@ -101,6 +113,9 @@
                 console.log("direction services failed")
             }
         });
+        start_marker.setOptions({visible:false});
+        directionsDisplay.setMap(map);
+        directionsDisplay.setPanel(document.getElementById('directionsPanel'));
     }
     function showPoints(results) {
         console.dir(results);
@@ -115,15 +130,38 @@
     }
     function getPoints(evt) {
         evt.preventDefault();
+        elevator.getElevationForLocations({
+            'locations': {start_marker.getPosition().lat(),start_marker.getPosition().lng()}
+            }, function(results, status) {
+                console.log(status)
+                if (status === 'OK') {
+                    if (results[0]) {
+                        var elevation = results[0].elevation;
+                        console.log(elevation)
+                    };
+                };
+            });
+        $("#escape-story").empty();
         var formInputs = {
-            "latitude": start_lat,
-            "longitude": start_lng,
+            "latitude": start_marker.getPosition().lat(),
+            "longitude": start_marker.getPosition().lng(),
+            "min_height": 150
+            "max_time": 60
+            "travel_mode": "WALKING"
+            "elevation": elevation
         };
+        if $(#elevationThreshold).val():
+            formInputs["min_height"]= $(#elevationThreshold).val();
+        if $(#timeThreshold).val():
+            formInputs["max_time"] = $(#timeThreshold).val();
+        if $(#travelModes).val():
+            formInputs["travel_mode"] = $(#travelModes).val();
         $.get("/start.json", formInputs, showPoints);
     }
-    $("#LocationPicker").on("click", getPoints);
+    $("#LocationPicker").on("submit", getPoints);
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ API_KEY }}&callback=initMap" async defer></script>
+
 
 
 

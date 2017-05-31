@@ -1,19 +1,13 @@
 #google_map {
-    width: 80%;
-    height: 400px;
+    width: 60%;
+    height: 500px;
 }
-#floating-panel {
-    position: absolute;
-    top: 10px;
-    left: 25%;
-    z-index: 5;
-    background-color: #fff;
-    border: 1px solid #999;
-    text-align: center;
-    font-family: 'Roboto','sans-serif';
-    line-height: 50px;
-    padding-left: 10px;
+#directionsPanel {
+    float: right;
+    width: 25%;
+    height 100%
 }
+
 /*
 JAVASCRIPT STYLE ARRAY:
 [

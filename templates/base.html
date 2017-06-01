@@ -13,6 +13,17 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 {% if "user_id" in session %}
 <button type="button" class="btn btn-info btn-sm" id="loggoutbutton" style="display: none">Loggout</button>
+<!-- Adding navbar -->
+
+<div id="mySidenav" class="sidenav">
+  <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+  <div id="sidebar-body"></div>
+</div>
+<br>
+<p>
+<span style="font-size:60px;cursor:pointer" id="sidebarPointer">&#9776;</span>
+</p> 
+
 {% else %}
 <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#loginModal" id="loginbutton">Login/Register</button>
 {% endif %}
@@ -109,9 +120,25 @@ function loginUser(evt) {
 $("#loginForm").on("submit", loginUser);
 $("#loggoutbutton").on("click", function() {
     $.get("/loggout.json", doMessage);
-    $("#loggoutbutton").hide();
+    $("#loggoutbutton").attr('style', 'display: none');
     $("#loginbutton").show();
 });
+function fillSidebar(result) {
+    var response = result["response"];
+    var history = result["history"];
+    $("#sidebar-body").html("<ul>");
+    for (var old of history) {
+        $("#sidebar-body").append("<li>Start: "+old["start_lat"]+", "+old["start_lng"]+", "+old["start_ele"]+"meters\n\
+            End: "+old["end_lat"]+", "+old["end_lng"]+", "+old["end_ele"]+"meters\n\
+            Height: "+old["min_ele"]+" Time: "+old["max_time"]+" mode: "+old["travel_mode"]+"</li>");
+    };
+    $("#sidebar-body").append("</ul>");
+}
+function loadSidebar(evt) {
+  $("#mySidenav").addClass("open");
+  $.get("/search_history.json", fillSidebar);
+}
+$("#sidebarPointer").on("click", loadSidebar)
 </script>
 </body>
 </html>

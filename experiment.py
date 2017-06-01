@@ -25,50 +25,45 @@ class Thing(db.Model):
                                                                                   self.longitude,
                                                                                   self.elevation)
 
+    @classmethod
+    def all_points(cls, raw_data, steps_x=BAY['steps_x'], steps_y=BAY['steps_y'], base_lat=BAY['N'], base_lng=BAY['W'], end_lat=BAY['S'], end_lng=BAY['E']):
+        """loads all points into database"""
 
-def all_points(raw_data, steps_x=BAY['steps_x'], steps_y=BAY['steps_y'], base_lat=BAY['N'], base_lng=BAY['W'], end_lat=BAY['S'], end_lng=BAY['E']):
-    """loads all points into database"""
+        lng_step = (end_lng - base_lng) / steps_x
+        lat_step = (end_lat - base_lat) / steps_y
+        for y, row in enumerate(raw_data):
+            lat = base_lat + (y * lat_step)
+            for x, column in enumerate(row):
+                lng = base_lng + (x * lng_step)
+                elevation = raw_data[y, x]
+                thing = cls(latitude=lat, longitude=lng, elevation=float(elevation))
+                db.session.add(thing)
+                db.session.commit()
 
-    lng_step = (end_lng - base_lng) / steps_x
-    lat_step = (end_lat - base_lat) / steps_y
-    for y, row in enumerate(raw_data):
-        lat = base_lat + (y * lat_step)
-        for x, column in enumerate(row):
-            lng = base_lng + (x * lng_step)
-            elevation = raw_data[y, x]
-            thing = Thing(latitude=lat, longitude=lng, elevation=float(elevation))
-            db.session.add(thing)
-            db.session.commit()
+    @classmethod
+    def range_query(cls, lat, lng, count=1):
+        """find all points within range"""
 
-
-def range_query(lat, lng, count=1):
-    """find all points within range"""
-
-    if not (South_B < lat < North_B) and not (West_B < lng < East_B):
-        return "Not in Bounds!"
-    radius = ((East_B - West_B) / steps_x) * 50 / 2
-    print radius
-    counter = count
-    reach = radius * counter
-    top_reach = lat + reach
-    if top_reach > North_B:
-        top_reach = North_B
-    bottom_reach = lat - reach
-    if bottom_reach < South_B:
-        bottom_reach = South_B
-    left_reach = lng - reach
-    if left_reach < West_B:
-        left_reach = West_B
-    right_reach = lng + reach
-    if right_reach > East_B:
-        right_reach = East_B
-    print top_reach, bottom_reach, left_reach, right_reach
-    things = Thing.query.filter(Thing.latitude < top_reach,
-                                bottom_reach < Thing.latitude,
-                                left_reach < Thing.longitude,
-                                Thing.longitude < right_reach).all()
-
-    return things
+        if not (BAY['S'] < lat < BAY['N']) and not (BAY['W'] < lng < BAY['E']):
+            return "Not in Bounds!"
+        radius = ((BAY['E'] - BAY['W']) / BAY['steps_x']) * 50 / 2
+        counter = count
+        reach = radius * counter
+        top_reach = lat + reach
+        if top_reach > BAY['N']:
+            top_reach = BAY['N']
+        bottom_reach = lat - reach
+        if bottom_reach < BAY['S']:
+            bottom_reach = BAY['S']
+        left_reach = lng - reach
+        if left_reach < BAY['W']:
+            left_reach = BAY['W']
+        right_reach = lng + reach
+        if right_reach > BAY['E']:
+            right_reach = BAY['E']
+        things = cls.query.filter(bottom_reach < cls.latitude, top_reach > cls.latitude,
+                                  left_reach < cls.longitude, right_reach > cls.longitude).all()
+        return things
 
 
 def connect_to_db(app, db_url='postgresql:///allpoints'):

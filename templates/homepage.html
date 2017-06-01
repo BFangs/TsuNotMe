@@ -12,14 +12,18 @@
     <input id="geo-submit" type="button" value="Set Marker!">
 </form>
 <form class="form-inline" id="LocationPicker">
-  <div class="form-group">
-    <label class="sr-only" for="elevationThreshold">Elevation Threshold:</label>
-    <input type="number" class="form-control" id="elevationThreshold" placeholder="### meters">
-  </div>
-  <div class="form-group">
-    <label class="sr-only" for="timeThreshold">Time Threshold:</label>
-    <input type="number" class="form-control" id="timeThreshold" placeholder="Tic Toc">
-  </div>
+    <select class="form-control" id="elevationThreshold">
+      <option value="50">50 meters</option>
+      <option value="100">100 meters</option>
+      <option value="150">150 meters</option>
+      <option value="200">200 meters</option>
+    </select>
+    <select class="form-control" id="timeThreshold">
+      <option value="15">15 min</option>
+      <option value="20">20 min</option>
+      <option value="25">25 min</option>
+      <option value="30">30 min</option>
+    </select>
     <select class="form-control" id="travelModes">
       <option value="WALKING">walking</option>
       <option value="DRIVING">driving</option>
@@ -41,7 +45,8 @@
     var end_marker;
     var directionsDisplay;
     var directionsService;
-    var endMarkerArray = [];
+    var elevator;
+    var start_elevation;
     function initMap() {
         directionsService = new google.maps.DirectionsService();
         map = new google.maps.Map(document.getElementById('google_map'), {
@@ -66,7 +71,7 @@
             start_marker.setOptions({visible:true});
         });
         var geocoder = new google.maps.Geocoder();
-        var elevator = new google.maps.ElevationService;
+        elevator = new google.maps.ElevationService;
         document.getElementById('geo-submit').addEventListener('click', function() {
           geocodeAddress(geocoder, map);
           start_marker.setOptions({visible:true});
@@ -88,29 +93,40 @@
             } else {
                 $("#messageBody").html('Geocode was not successful for the following reason: ' + status);
                 $('#messageModal').modal("show");
-            }
+            };
         });
     }
     function endMarker(latitude, longitude) {
         end_marker.setPosition({lat: latitude, lng: longitude});
     }
-    function calcRoute() {
+    function updatedHistory(result) {
+        console.log(result)
+        $("#messageBody").html(result["message"]);
+        $('#messageModal').modal("show");
+    }
+    function calcRoute(mode, id) {
         console.log(start_marker.getPosition().lat(), start_marker.getPosition().lng(), end_marker.getPosition().lat(), end_marker.getPosition().lng());
-        for (i = 0; i < markerArray.length; i++) {
-            markerArray[i].setMap(null);
-        }
         var request = {
             origin: {lat: start_marker.getPosition().lat(), lng: start_marker.getPosition().lng()},
             destination: {lat: end_marker.getPosition().lat(), lng: end_marker.getPosition().lng()},
             provideRouteAlternatives: true,
-            travelMode: 'WALKING'
+            travelMode: mode
         };
         directionsService.route(request, function(result, status) {
             if (status == 'OK') {
                 console.dir(request)
                 directionsDisplay.setDirections(result);
+                console.log(result['routes'][0]['legs'][0]['duration']['value']);
+                console.log(result['routes'][0]['legs'][0]['distance']['value']);
+                var directionResults = {
+                    "duration": result['routes'][0]['legs'][0]['duration']['value'],
+                    "distance": result['routes'][0]['legs'][0]['distance']['value'],
+                    "search_id": id
+                };
+                $.post("/results.json", directionResults, updatedHistory);
             } else {
-                console.log("direction services failed")
+                $("#messageBody").html('Directions request has failed! Please try a new search.\n\nerror status: '+ status);
+                $('#messageModal').modal("show");
             }
         });
         start_marker.setOptions({visible:false});
@@ -119,46 +135,44 @@
     }
     function showPoints(results) {
         console.dir(results);
-        lat = results["latitude"]
-        lng = results["longitude"]
-        endMarker(lat, lng)
-        console.log(results["elevation"].toString())
-        $("#escape-story").append("<p>the user is in tile: "+results["tile_id"].toString()+"</p>");
-        $("#escape-story").append("<p>The nearest high point is at lat: "+results["latitude"].toString()+" long: "+results["longitude"].toString()+" elevation: "+results["elevation"].toString()+"</p>");
-        $("#escape-story").append("<p>What will happen to you?</p>");
-        calcRoute()
+        var lat = results["latitude"];
+        var lng = results["longitude"];
+        endMarker(lat, lng);
+        var end_elevation = results["point_elevation"].toString();
+        $("#escape-story").append("<p>the user started at: "+results["elevation"].toString()+"</p>");
+        $("#escape-story").append("<p>The nearest high point is at lat: "+lat.toString()+" long: "+lng.toString()+" elevation: "+end_elevation+"</p>");
+        calcRoute(results["travel_mode"].toString(), results["search_id"].toString());
     }
-    function getPoints(evt) {
-        evt.preventDefault();
-        elevator.getElevationForLocations({
-            'locations': {start_marker.getPosition().lat(),start_marker.getPosition().lng()}
-            }, function(results, status) {
-                console.log(status)
-                if (status === 'OK') {
-                    if (results[0]) {
-                        var elevation = results[0].elevation;
-                        console.log(elevation)
-                    };
-                };
-            });
+    function getPoints(start_elevation) {
         $("#escape-story").empty();
+        console.log('getting points' + start_elevation.toString());
         var formInputs = {
             "latitude": start_marker.getPosition().lat(),
             "longitude": start_marker.getPosition().lng(),
-            "min_height": 150
-            "max_time": 60
-            "travel_mode": "WALKING"
-            "elevation": elevation
+            "min_height": $('#elevationThreshold').val(),
+            "max_time": $("#timeThreshold").val(),
+            "travel_mode": $("#travelModes").val(),
+            "elevation": start_elevation
         };
-        if $(#elevationThreshold).val():
-            formInputs["min_height"]= $(#elevationThreshold).val();
-        if $(#timeThreshold).val():
-            formInputs["max_time"] = $(#timeThreshold).val();
-        if $(#travelModes).val():
-            formInputs["travel_mode"] = $(#travelModes).val();
+        console.log(formInputs);
         $.get("/start.json", formInputs, showPoints);
     }
-    $("#LocationPicker").on("submit", getPoints);
+    function getElevation(evt) {
+        evt.preventDefault();
+        elevator.getElevationForLocations({
+            'locations': [{lat: start_marker.getPosition().lat(), lng: start_marker.getPosition().lng()}]
+            }, function (results, status) {
+                console.log(status)
+                if (status === 'OK') {
+                    if (results[0]) {
+                        start_elevation = results[0].elevation;
+                        console.log(start_elevation);
+                        getPoints(start_elevation);
+                    };
+                };
+            });
+    }
+    $("#LocationPicker").on("submit", getElevation);
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ API_KEY }}&callback=initMap" async defer></script>
 

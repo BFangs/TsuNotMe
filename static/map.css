@@ -7,6 +7,14 @@
     width: 25%;
     height 100%
 }
+.open {
+   marginLeft: 250px;
+   width: 250px;
+}
+.close {
+   marginLeft: 0;
+   width: 0
+}
 
 /*
 JAVASCRIPT STYLE ARRAY:

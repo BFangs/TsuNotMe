@@ -151,7 +151,7 @@ class User(db.Model):
     email = db.Column(db.String(64), nullable=False, default=None)
     password = db.Column(db.String(64), nullable=False, default=None)
 
-    s = db.relationship('Search', backref='u', order_by=user_id)
+    s = db.relationship('Search', backref='u', order_by='Search.address_id')
 
     def __repr__(self):
         """Provide helpful representation when printed."""
@@ -188,6 +188,14 @@ class User(db.Model):
         db.session.commit()
         return user.user_id
 
+    @classmethod
+    def get_history(cls, user_id):
+        """getting search history for an user"""
+
+        person = cls.query.filter(cls.user_id == user_id).one()
+        history = person.s
+        return history
+
 
 class Search(db.Model):
     """Searches that user has performed."""
@@ -204,6 +212,7 @@ class Search(db.Model):
     travel_mode = db.Column(db.String(64))
 
     a = db.relationship('Address', backref='s', order_by=address_id)
+    p = db.relationship('Point', backref='s', order_by=end_point)
 
     def __repr__(self):
         """Provide helpful representation when printed."""
@@ -219,58 +228,113 @@ class Search(db.Model):
                                                                           self.travel_mode)
 
     @classmethod
-    def tile_query(cls, lat, lng, user_id, min_height, max_time, travel_mode, elevation):
+    def new_search(cls, lat, lng, user_id, min_height, max_time, travel_mode, elevation):
         """looking for high elevation just within a tile"""
 
-        if not (South_B < lat < North_B) and not (West_B < lng < East_B):
-            return None
-        address_id = Address.check_address(cls, lat, lng, ele, name=None)
-        search = cls(user_id=user_id, address_id=address_id, )
-        point_objects = Tile.query.filter(Tile.bottom_bound < lat, Tile.top_bound > lat,
-                                          Tile.left_bound < lng, Tile.right_bound > lng).one().p
-        point_list = []
-        for point in point_objects:
-            tup = (point.tile_id, point.latitude, point.longitude, point.elevation)
-            point_list.append(tup)
-        return point_list
+        if not (BAY['S'] < lat < BAY['N']) and not (BAY['W'] < lng < BAY['E']):
+            return "Not in Bounds"
+        address_id = Address.check_address(lat, lng, elevation)
+        search = cls(user_id=user_id, address_id=address_id, max_time=max_time, min_ele=min_height,
+                     travel_mode=travel_mode)
+        db.session.add(search)
+        db.session.commit()
+        if elevation < search.min_ele:
+            threshold = search.min_ele
+        else:
+            threshold = elevation
+        print threshold
+        radius = search.calc_radius(max_time, travel_mode)
+        print radius
+        points = search.nearby_tiles_query(lat, lng, radius, threshold)
+        print 'points'
+        top_point = search.get_closest(points, lat, lng)
+        print 'tops'
+        search.end_point = top_point[1].point_id
+        print search.p
+        db.session.commit()
+        response = {"point": search.p, "id": search.search_id}
+        return response
 
+    @classmethod
+    def add_time(cls, search_id, duration):
+        """looking up search_id to update with duration"""
 
-    def nearby_tiles_query(lat, lng, count=1):
+        search = cls.query.filter(cls.search_id == search_id).one()
+        # duration is in seconds, change to minutes
+        time = int(duration) / 60
+        search.travel_time = time
+        return "%s has updated their search!" % (search.u.name)
+
+    def calc_radius(self, max_time, travel_mode):
+        """calculating what increment to pass into radiating query, speed is in ft/min"""
+
+        typical_speed = {"WALKING": 440,
+                         "DRIVING": 4400,
+                         "BIKING": 1320,
+                         "TRANSIT": 2000}
+        max_distance = max_time * typical_speed[travel_mode]
+        # increment distance is first in feet, allows it to radiate out 6 times before running out of time
+        increment_distance = max_distance / 6
+        # translating to steps, data isn't continuous each step is around 30 ft
+        increment_steps = increment_distance / 30
+        # translating to lat/lng increments which will be used in the future for reasonable euclidian estimates
+        radius = ((BAY['E'] - BAY['W']) / BAY['steps_x']) * increment_steps
+        return radius
+
+    @staticmethod
+    def get_meters(distance):
+        """turns elevation in feet into meters for storage"""
+
+        return distance * 0.305
+
+    @staticmethod
+    def get_feet(distance):
+        """turns elevation and travel into feet for display"""
+
+        return distance * 3.28084
+
+    def nearby_tiles_query(self, lat, lng, radius, threshold, count=1):
         """looking for high elevation in nearby tiles"""
 
-        if not (South_B < lat < North_B) and not (West_B < lng < East_B):
-            return "Not in Bounds!"
-        radius = ((East_B - West_B) / steps_x) * incr / 2
-        radiate_bounds(count, radius)
         point_list = []
-        for tile in tile_objects:
-            points = tile.p
-            for point in points:
-                tup = (point.tile_id, point.latitude, point.longitude, point.elevation)
-                point_list.append(tup)
+        counter = count
+        while not point_list:
+            reach = radius * counter
+            top_reach = lat + reach
+            if top_reach > BAY['N']:
+                top_reach = BAY['N']
+            bottom_reach = lat - reach
+            if bottom_reach < BAY['S']:
+                bottom_reach = BAY['S']
+            left_reach = lng - reach
+            if left_reach < BAY['W']:
+                left_reach = BAY['W']
+            right_reach = lng + reach
+            if right_reach > BAY['E']:
+                right_reach = BAY['E']
+            tile_objects = Tile.query.filter(Tile.bottom_bound < top_reach, Tile.top_bound > bottom_reach,
+                                             Tile.left_bound < right_reach, Tile.right_bound > left_reach).all()
+            print len(tile_objects)
+            for tile in tile_objects:
+                points = tile.p
+                for point in points:
+                    print point.elevation
+                    if point.elevation > threshold:
+                        point_list.append(point)
+            counter += 1
+        print point_list
         return point_list
 
-    def radiate_bounds(count, radius):
-        """calculate reach for tiles query"""
+    @staticmethod
+    def get_closest(points, lat, lng):
+        """takes a list of points and returns the closest one"""
 
-        tile_list = []
-        counter = count
-        reach = radius * counter
-        top_reach = lat + reach
-        if top_reach > North_B:
-            top_reach = North_B
-        bottom_reach = lat - reach
-        if bottom_reach < South_B:
-            bottom_reach = South_B
-        left_reach = lng - reach
-        if left_reach < West_B:
-            left_reach = West_B
-        right_reach = lng + reach
-        if right_reach > East_B:
-            right_reach = East_B
-        tile_objects = Tile.query.filter(Tile.bottom_bound < top_reach, Tile.top_bound > bottom_reach,
-                                         Tile.left_bound < right_reach, Tile.right_bound > left_reach).all()
-        return tile_objects
+        distances = []
+        for point in points:
+            distance = ((point.latitude - lat) ** 2 + (point.longitude - lng) ** 2) ** (1/2)
+            distances.append((distance, point))
+        distances.sort(key=lambda x: x[0])
+        return distances[0]
 
 
 class Address(db.Model):
@@ -297,10 +361,10 @@ class Address(db.Model):
     def check_address(cls, lat, lng, ele, name=None):
         """checks if an address is in the database, if not, calls instantiation"""
 
-        place = db.session.query(cls).filter(cls.latitude == lat, cls.longitude == lng).one()
-        if place:
+        try:
+            place = db.session.query(cls).filter(cls.latitude == lat, cls.longitude == lng).one()
             return place.address_id
-        else:
+        except:
             new = cls.new_address(lat, lng, ele, name)
             return new
 

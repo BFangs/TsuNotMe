@@ -1,5 +1,4 @@
 from osgeo import gdal
-import numpy as np
 
 geo = gdal.Open('imgn38w123_13.img')
 bay_data = geo.ReadAsArray()

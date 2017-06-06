@@ -1,6 +1,5 @@
-from model import db, connect_to_db
-from seed import load_tiles, load_points
-from data import get_rows, get_tiles
+from model import db, connect_to_db, Tile, Point
+from seed import load_tiles
 from server import app
 import numpy as np
 import unittest

@@ -79,7 +79,7 @@ class MyRowsUnitTests(unittest.TestCase):
                          [[30, 31, 32, 33, 34]])
         self.assertEqual((Tile.get_rows(test_array, position, y_dimension, increment, base, step)[0],
                           Tile.get_rows(test_array, position, y_dimension, increment, base, step)[1]),
-                         (6, 8))
+                         (6, 7))
 
 
 class MyTilesUnitTests(unittest.TestCase):
@@ -177,6 +177,18 @@ class MyMaxUnitTests(unittest.TestCase):
 
         test_array = self.numpy_tile_it(4)
         self.assertEqual(Point.local_max(test_array, 0, 0, 1, 1), (4, 4, 15.0))
+
+    def test_local_extrema(self):
+        """function should return array of y indices and array of x indices"""
+
+        test_array = np.array([[0,  0,  2,  1,  4,  5,  6,  0,  8],
+                               [9, 10, 0, 12, 13, 14, 15, 16, 17],
+                               [18, 19, 20, 21, 22, 23, 24, 25, 26],
+                               [9, 10, 11, 12, 23, 14, 15, 34, 17],
+                               [9, 90, 11, 12, 13, 14, 15, 16, 17],
+                               [9, 10, 11, 12, 13, 14, 15, 30, 17]])
+        self.assertEqual(Point.local_extrema(test_array)[0].tolist(), [3, 3, 4])
+        self.assertEqual(Point.local_extrema(test_array)[1].tolist(), [4, 7, 1])
 
 
 if __name__ == "__main__":

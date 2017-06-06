@@ -32,12 +32,17 @@ def get_points():
     print latitude, longitude, elevation, min_height, max_time, travel_mode, user_id
     result = Search.new_search(latitude, longitude, user_id, min_height, max_time, travel_mode, elevation)
     point = result["point"]
+    if elevation > min_height:
+        message = "You're already at a safe location! If you want to climb even higher follow the route"
+    else:
+        message = "Hurry to safety! tik tok tik tok..."
     answer = {"point_elevation": point.elevation,
               "latitude": point.latitude,
               "longitude": point.longitude,
               "elevation": elevation,
               "travel_mode": travel_mode,
               "max_time": max_time,
+              "message": message,
               "search_id": result["id"]}
     print answer
     return jsonify(answer)
@@ -56,13 +61,14 @@ def get_history():
     for search in history:
         thing = {"start_lat": search.a.latitude,
                  "start_lng": search.a.longitude,
-                 "start_ele": search.a.elevation,
+                 "start_ele": int(search.a.elevation),
                  "end_lat": search.p.latitude,
                  "end_lng": search.p.longitude,
-                 "end_ele": search.p.elevation,
+                 "end_ele": int(search.p.elevation),
                  "min_ele": search.min_ele,
                  "max_time": search.max_time,
-                 "travel_mode": search.travel_mode}
+                 "travel_mode": search.travel_mode,
+                 "search_id": search.search_id}
         response['history'].append(thing)
     return jsonify(response)
 
@@ -72,9 +78,20 @@ def update_search_history():
     """ajax call updating search with distance and duration info"""
 
     duration = request.form.get('duration')
+    distance = request.form.get('distance')
     search_id = request.form.get('search_id')
-    success = Search.add_time(search_id, duration)
+    success = Search.add_travel_data(search_id, duration, distance)
     answer = {"message": success}
+    return jsonify(answer)
+
+
+@app.route('/route_fail.json', methods=['POST'])
+def delete_search():
+    """ajax call deleting search when route fails to load from google"""
+
+    search_id = request.form.get('search_id')
+    message = Search.delete_entry(search_id)
+    answer = {"message": message}
     return jsonify(answer)
 
 

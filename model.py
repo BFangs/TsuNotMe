@@ -2,7 +2,7 @@
 
 from flask_sqlalchemy import SQLAlchemy
 import numpy as np
-from data import bay_data, BAY
+from data import BAY
 
 
 # connecting to the PostgreSQL database through flask_sqlalchemy
@@ -23,6 +23,8 @@ class Tile(db.Model):
     right_bound = db.Column(db.Float)
     top_bound = db.Column(db.Float)
     bottom_bound = db.Column(db.Float)
+
+    p = db.relationship('Point', backref='t', order_by='Point.elevation')
 
     def __repr__(self):
         """Provide helpful information when printed"""
@@ -95,8 +97,6 @@ class Point(db.Model):
     longitude = db.Column(db.Float)
     elevation = db.Column(db.Float)
 
-    t = db.relationship('Tile', backref='p', order_by=elevation)
-
     def __repr__(self):
         """Provide helpful information when printed"""
 
@@ -109,36 +109,76 @@ class Point(db.Model):
     def load_points(cls, tile_array, top_bound, left_bound, tile_id, lat_step, lng_step):
         """finding highest elevation points per tile and loading into database"""
 
-        latitude, longitude, elevation = cls.local_max(tile_array, top_bound, left_bound, lat_step, lng_step)
-        # instantiating a single point for each tile, highest elevation point
-        point = cls(tile_id=tile_id, latitude=latitude, longitude=longitude, elevation=elevation)
-        # commiting session to db
-        db.session.add(point)
+        # latitude, longitude, elevation = cls.local_max(tile_array, top_bound, left_bound, lat_step, lng_step)
+        # instantiating a single point for each tile, highest elevation point, commmented out and tabled
+        peaks = cls.local_extrema(tile_array)
+        ave = np.mean(tile_array)
+        if peaks:
+            whys, exes = peaks
+            for i in xrange(len(whys)):
+                elevation = float(tile_array[whys[i], exes[i]])
+                if elevation > 25 and elevation > ave:
+                    latitude, longitude = cls.explicify_data(whys[i], exes[i], top_bound, left_bound, lat_step, lng_step)
+                    point = cls(tile_id=tile_id, latitude=latitude, longitude=longitude, elevation=elevation)
+                    db.session.add(point)
+        else:
+            latitude, longitude, elevation = cls.local_max(tile_array, top_bound, left_bound, lat_step, lng_step)
+            if elevation > 25:
+                point = cls(tile_id=tile_id, latitude=latitude, longitude=longitude, elevation=elevation)
+                db.session.add(point)
         db.session.commit()
 
     @staticmethod
     def local_max(tile_arr, base_lat, base_lng, lat_step, lng_step):
         """finds highest elevation point and returns indices"""
 
-        # extracts the dimensions of the array given
-        side_y, side_x = tile_arr.shape
         # finds the index of the highest data point in array
         max_index = np.argmax(tile_arr)
         # index was returned in flattened form, need to find 2D index
+        # extracts the dimensions of the array given
+        side_y, side_x = tile_arr.shape
         y = max_index // side_x
         x = max_index % side_x
         # selecting elevation from index
         # converting to python float is important for compatibility to psql
         elevation = float(tile_arr[y, x])
-        latitude = ((y+1) * lat_step) + base_lat
-        longitude = ((x+1) * lng_step) + base_lng
+        latitude, longitude = Point.explicify_data(y, x, base_lat, base_lng, lat_step, lng_step)
         return (latitude, longitude, elevation)
 
     @staticmethod
-    def local_extrema(tile_arr, base_lat, base_lng, lat_step, lng_step):
-        """finds peaks within tile and returns indices"""
+    def explicify_data(y, x, base_lat, base_lng, lat_step, lng_step):
+        """takes indices and bounding coordinates and returns lat, lng"""
 
-        pass
+        latitude = ((y+1) * lat_step) + base_lat
+        longitude = ((x+1) * lng_step) + base_lng
+        return (latitude, longitude)
+
+    @staticmethod
+    def local_extrema(tile, order=1, mode='clip'):
+        """finds peaks within tile and returns indices, based on np.argrelmax"""
+
+        side_y = tile.shape[0]
+        side_x = tile.shape[1]
+        yloci = np.arange(0, side_y)
+        xloci = np.arange(0, side_x)
+        results = np.ones(tile.shape, dtype=bool)
+        y_index = tile.take(yloci, axis=0, mode=mode)
+        x_index = tile.take(xloci, axis=1, mode=mode)
+
+        for shift in xrange(1, order + 1):
+            plus = tile.take(yloci + shift, axis=0, mode=mode)
+            minus = tile.take(yloci - shift, axis=0, mode=mode)
+            results &= np.greater(y_index, plus)
+            results &= np.greater(y_index, minus)
+        for shift in xrange(1, order + 1):
+            plus = tile.take(xloci + shift, axis=1, mode=mode)
+            minus = tile.take(xloci - shift, axis=1, mode=mode)
+            results &= np.greater(x_index, plus)
+            results &= np.greater(x_index, minus)
+        if(~results.any()):
+            return []
+        whys, exes = map(lambda x: x.tolist(), np.where(results))
+        return (whys, exes)
 
 
 class User(db.Model):
@@ -164,14 +204,14 @@ class User(db.Model):
     def check_user(cls, email, password, nickname=None):
         """checks if user is in databse"""
 
-        result = cls.query.filter_by(email=email).one()
-        if result:
+        try:
+            result = cls.query.filter_by(email=email).one()
             if result.password == password:
                 return {"id": result.user_id,
                         "message": "You're now logged in! Congrats!"}
             else:
                 return {"message": "That was the wrong password please try again"}
-        else:
+        except:
             user_id = cls.new_user(email, password, nickname)
             return {"id": user_id,
                     "message": "You're now registered! I've also logged you in :)"}
@@ -207,45 +247,48 @@ class Search(db.Model):
     search_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     end_point = db.Column(db.Integer, db.ForeignKey('points.point_id'))
     travel_time = db.Column(db.Integer, nullable=True)
+    travel_distance = db.Column(db.Integer)
     min_ele = db.Column(db.Integer)
     max_time = db.Column(db.Integer)
     travel_mode = db.Column(db.String(64))
 
-    a = db.relationship('Address', backref='s', order_by=address_id)
-    p = db.relationship('Point', backref='s', order_by=end_point)
+    p = db.relationship('Point', backref='s', order_by='Point.latitude')
 
     def __repr__(self):
         """Provide helpful representation when printed."""
 
         return "<User user_id=%s address_id=%s search_id=%s end_point=%s \n\
-                travel_time=%s min_ele=%s max_time=%s travel_mode=%s>" % (self.user_id,
-                                                                          self.address_id,
-                                                                          self.search_id,
-                                                                          self.end_point,
-                                                                          self.travel_time,
-                                                                          self.min_ele,
-                                                                          self.max_time,
-                                                                          self.travel_mode)
+                travel_time/distance=%s,%s min_ele=%s max_time=%s travel_mode=%s>" % (self.user_id,
+                                                                                      self.address_id,
+                                                                                      self.search_id,
+                                                                                      self.end_point,
+                                                                                      self.travel_time,
+                                                                                      self.travel_distance,
+                                                                                      self.min_ele,
+                                                                                      self.max_time,
+                                                                                      self.travel_mode)
 
     @classmethod
     def new_search(cls, lat, lng, user_id, min_height, max_time, travel_mode, elevation):
         """looking for high elevation just within a tile"""
 
         if not (BAY['S'] < lat < BAY['N']) and not (BAY['W'] < lng < BAY['E']):
-            return "Not in Bounds"
+            return {"message": "Not in Bounds"}
         address_id = Address.check_address(lat, lng, elevation)
         search = cls(user_id=user_id, address_id=address_id, max_time=max_time, min_ele=min_height,
                      travel_mode=travel_mode)
         db.session.add(search)
-        db.session.commit()
+        db.session.flush()
         if elevation < search.min_ele:
             threshold = search.min_ele
         else:
             threshold = elevation
-        print threshold
-        radius = search.calc_radius(max_time, travel_mode)
-        print radius
-        points = search.nearby_tiles_query(lat, lng, radius, threshold)
+        if threshold >= 500:
+            points = search.high_threshold_query(threshold)
+        else:
+            radius = search.calc_radius(max_time, travel_mode)
+            print radius
+            points = search.nearby_tiles_query(lat, lng, radius, threshold)
         print 'points'
         top_point = search.get_closest(points, lat, lng)
         print 'tops'
@@ -256,22 +299,31 @@ class Search(db.Model):
         return response
 
     @classmethod
-    def add_time(cls, search_id, duration):
+    def add_travel_data(cls, search_id, duration, distance):
         """looking up search_id to update with duration"""
 
         search = cls.query.filter(cls.search_id == search_id).one()
         # duration is in seconds, change to minutes
+        # pretty sure distance is in meters. pretty sure....
+        length = int(distance)
         time = int(duration) / 60
         search.travel_time = time
+        search.travel_distance = length
         return "%s has updated their search!" % (search.u.name)
+
+    @classmethod
+    def delete_entry(cls, search_id):
+        """deleting entry using search_id"""
+
+        pass
 
     def calc_radius(self, max_time, travel_mode):
         """calculating what increment to pass into radiating query, speed is in ft/min"""
 
         typical_speed = {"WALKING": 440,
-                         "DRIVING": 4400,
-                         "BIKING": 1320,
-                         "TRANSIT": 2000}
+                         "DRIVING": 2500,
+                         "BICYCLING": 750,
+                         "TRANSIT": 1000}
         max_distance = max_time * typical_speed[travel_mode]
         # increment distance is first in feet, allows it to radiate out 6 times before running out of time
         increment_distance = max_distance / 6
@@ -298,6 +350,7 @@ class Search(db.Model):
 
         point_list = []
         counter = count
+        tile_memo = set()
         while not point_list:
             reach = radius * counter
             top_reach = lat + reach
@@ -312,17 +365,34 @@ class Search(db.Model):
             right_reach = lng + reach
             if right_reach > BAY['E']:
                 right_reach = BAY['E']
-            tile_objects = Tile.query.filter(Tile.bottom_bound < top_reach, Tile.top_bound > bottom_reach,
-                                             Tile.left_bound < right_reach, Tile.right_bound > left_reach).all()
+            # tile_objects = Tile.query.filter(Tile.bottom_bound < top_reach, Tile.top_bound > bottom_reach,
+            #                                  Tile.left_bound < right_reach, Tile.right_bound > left_reach).all()
+            # print "num tiles"
+            # print len(tile_objects)
+            # tiles = [x for x in tile_objects if x not in tile_memo]
+            # for tile in tiles:
+            #     tile_memo.add(tile)
+            #     points = tile.p
+            #     for point in points:
+            #         if point.elevation > threshold:
+            #             point_list.append(point)
+            tile_objects = db.session.query(Tile.tile_id, Point).filter(Tile.bottom_bound < top_reach, Tile.top_bound > bottom_reach,
+                                                                        Tile.left_bound < right_reach, Tile.right_bound > left_reach,
+                                                                        Point.elevation > threshold).join(Point).all()
             print len(tile_objects)
-            for tile in tile_objects:
-                points = tile.p
-                for point in points:
-                    print point.elevation
-                    if point.elevation > threshold:
-                        point_list.append(point)
+            for tile, point in tile_objects:
+                # if point.elevation > threshold:
+                if tile not in tile_memo:
+                    point_list.append(point)
+                tile_memo.add(tile)
             counter += 1
         print point_list
+        return point_list
+
+    def high_threshold_query(self, threshold):
+        """looking for points from points table over threshold"""
+
+        point_list = Point.query.filter(Point.elevation > threshold).all()
         return point_list
 
     @staticmethod
@@ -347,6 +417,8 @@ class Address(db.Model):
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
     elevation = db.Column(db.Float)
+
+    s = db.relationship('Search', backref='a', order_by='Search.address_id')
 
     def __repr__(self):
         """Provide helpful representation when printed."""
@@ -381,7 +453,7 @@ class Address(db.Model):
         return new.address_id
 
 
-def connect_to_db(app, db_url='postgresql:///newvp'):
+def connect_to_db(app, db_url='postgresql:///expand'):
     """Connect the database to our Flask app."""
 
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
@@ -396,7 +468,3 @@ if __name__ == "__main__":
     from server import app
     connect_to_db(app)
     print "Connected to DB."
-    db.create_all()
-    print "tables created"
-    # Calling main load function with variables in correct order, be careful of order
-    Tile.load_tiles(bay_data, BAY['incr'], BAY['steps_x'], BAY['steps_y'], BAY['N'], BAY['W'], BAY['S'], BAY['E'])

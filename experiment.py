@@ -38,7 +38,13 @@ class Thing(db.Model):
                 elevation = raw_data[y, x]
                 thing = cls(latitude=lat, longitude=lng, elevation=float(elevation))
                 db.session.add(thing)
-                db.session.commit()
+            db.session.commit()
+
+    # for row in csv:
+    #     insert
+    #     if i % 10000 == 0:
+    #         commit
+    # commit
 
     @classmethod
     def range_query(cls, lat, lng, count=1):

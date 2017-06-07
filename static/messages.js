@@ -1,3 +1,9 @@
+// javascript related to event handlers and modals including:
+//     login/registration,
+//     sidebar with search history,
+//     error messages.
+
+
 function doMessage(result) {
     var message = result["message"];
     $("#messageBody").html(message);
@@ -37,12 +43,10 @@ function loadSidebar(evt) {
   $("#sidenav").attr('style', 'width: 400px');
   $("#sidebar-body").empty();
   $.get("/search_history.json", fillSidebar);
-  // $("#sidebarPointer").prop('disabled', true);
 }
 function closeSidebar(evt) {
     console.log(this);
   $("#sidenav").attr('style', 'width: 0');
-  // $("#sidebarPointer").prop('disabled', false);
 }
 function loadInfowindow(evt) {
     var stuff = this.data();

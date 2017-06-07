@@ -1,16 +1,13 @@
-"""Models and database functions for elevation data"""
+"""Models definitions and database functions for elevation data, users, search history"""
 
 from flask_sqlalchemy import SQLAlchemy
 import numpy as np
+# necessary constants for many function calculations
 from data import BAY
 
 
-# connecting to the PostgreSQL database through flask_sqlalchemy
-# helper library
-
+# connecting to the PostgreSQL database through flask_sqlalchemy helper library
 db = SQLAlchemy()
-
-# Model definitions
 
 
 class Tile(db.Model):
@@ -126,6 +123,7 @@ class Point(db.Model):
             if elevation > 25:
                 point = cls(tile_id=tile_id, latitude=latitude, longitude=longitude, elevation=elevation)
                 db.session.add(point)
+        # commit placed purposefully to keep from commiting after every point, really slows down loading
         db.session.commit()
 
     @staticmethod
@@ -285,14 +283,14 @@ class Search(db.Model):
             threshold = elevation
         if threshold >= 500:
             points = search.high_threshold_query(threshold)
+            print "high"
         else:
             radius = search.calc_radius(max_time, travel_mode)
             print radius
             points = search.nearby_tiles_query(lat, lng, radius, threshold)
-        print 'points'
-        top_point = search.get_closest(points, lat, lng)
-        print 'tops'
-        search.end_point = top_point[1].point_id
+            print "nearby"
+        distance, top_point = search.get_closest(points, lat, lng)
+        search.end_point = top_point.point_id
         print search.p
         db.session.commit()
         response = {"point": search.p, "id": search.search_id}
@@ -300,7 +298,7 @@ class Search(db.Model):
 
     @classmethod
     def add_travel_data(cls, search_id, duration, distance):
-        """looking up search_id to update with duration"""
+        """looking up search_id to update entry with duration info from google directions"""
 
         search = cls.query.filter(cls.search_id == search_id).one()
         # duration is in seconds, change to minutes
@@ -309,12 +307,13 @@ class Search(db.Model):
         time = int(duration) / 60
         search.travel_time = time
         search.travel_distance = length
-        return "%s has updated their search!" % (search.u.name)
+        return "You updated your search!"  # % (search.u.name) need to handle when no user logged in
 
     @classmethod
     def delete_entry(cls, search_id):
         """deleting entry using search_id"""
 
+        # haven't decided whether I want to store error data into search table instead
         pass
 
     def calc_radius(self, max_time, travel_mode):
@@ -365,6 +364,7 @@ class Search(db.Model):
             right_reach = lng + reach
             if right_reach > BAY['E']:
                 right_reach = BAY['E']
+            # this type of query was noticeably slow. functional. but slow.
             # tile_objects = Tile.query.filter(Tile.bottom_bound < top_reach, Tile.top_bound > bottom_reach,
             #                                  Tile.left_bound < right_reach, Tile.right_bound > left_reach).all()
             # print "num tiles"
@@ -386,7 +386,6 @@ class Search(db.Model):
                     point_list.append(point)
                 tile_memo.add(tile)
             counter += 1
-        print point_list
         return point_list
 
     def high_threshold_query(self, threshold):
@@ -397,11 +396,13 @@ class Search(db.Model):
 
     @staticmethod
     def get_closest(points, lat, lng):
-        """takes a list of points and returns the closest one"""
+        """takes a list of points, calculates euclidean distance and returns the closest point object"""
 
         distances = []
+        print "getting closest!"
         for point in points:
-            distance = ((point.latitude - lat) ** 2 + (point.longitude - lng) ** 2) ** (1/2)
+            # errors happened with difference math syntax, unsure why, don't change unless to import math sqrt
+            distance = (((point.latitude - lat) ** 2) + ((point.longitude - lng) ** 2)) ** (0.5)
             distances.append((distance, point))
         distances.sort(key=lambda x: x[0])
         return distances[0]
@@ -463,8 +464,7 @@ def connect_to_db(app, db_url='postgresql:///expand'):
 
 
 if __name__ == "__main__":
-    #when running module interactively will allow working with database directly
-
+    # when running module interactively will allow working with database directly
     from server import app
     connect_to_db(app)
     print "Connected to DB."

@@ -4,15 +4,14 @@
     <title>Run for your life!</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <link href="/static/everything.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Poppins:500|Ubuntu" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:700|Ubuntu" rel="stylesheet">
 </head>
 <body>
 
 <script src="https://code.jquery.com/jquery.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
+<!-- navbar with brand name, login/logout/history buttons -->
 <nav class="navbar navbar-default">
   <div class="container-fluid">
     <!-- Brand and toggle get grouped for better mobile display -->
@@ -29,28 +28,22 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        {% if "user_id" in session %}
-        <li class="active" id="loggoutbutton"><a>Logout <span class="sr-only">(current)</span></a></li>
-        <li class="active" id="sidebarPointer"><a>Search History <span class="sr-only">(current)</span></a></li>
-        {% else %}
-        <li data-toggle="modal" data-target="#loginModal" id="loginbutton"><a>Login/Register</a></li>
-        {% endif %}
-      </ul>
+        <!-- for left side links, currently unused -->     
+       </ul>
       <ul class="nav navbar-nav navbar-right">
+        {% if "user_id" in session %}
+        <li class="active tab" id="loggoutbutton"><a>LOGOUT <span class="sr-only">(current)</span></a></li>
+        <li class="active tab" id="sidebarPointer"><a>SEARCH HISTORY <span class="sr-only">(current)</span></a></li>
+        {% else %}
+        <li class="active tab" data-toggle="modal" data-target="#loginModal" id="loginbutton"><a>LOGIN/REGISTER</a></li>
+        {% endif %}
       </ul>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </nav>
-
-<div id="sidenav" class="sidenav">
-  <a href="javascript:void(0)" class="closebtn" id="close-sidenav">&times;</a>
-  <div id="sidebar-body"></div>
-</div>
-
-<div id="escape-story"></div>
-
+<!-- container for search parameter form inputs and geocoder fir address search -->
 <div class="wrapper">
-    <div class='col-lg-4 col-xs-12 container'>
+    <div class='col-lg-9 col-xs-12 container'>
         <form class="form-inline" id="LocationPicker">
         <div class="form-group">
             <label class="sr-only" for="geocoder">Enter Address:</label>
@@ -98,7 +91,11 @@
     <div class='map' id='google_map'></div>
     <div class='directionsPanel' id="directionsPanel"></div>
 </div>
-
+<!-- sidebar displaying search history -->
+<div id="sidenav" class="sidenav">
+  <a href="javascript:void(0)" class="closebtn" id="close-sidenav">&times;</a>
+  <div id="sidebar-body"></div>
+</div>
 <!-- Login Modal -->
 <div id="loginModal" class="modal fade" role="dialog">
   <div class="modal-dialog modal-lg">
@@ -138,7 +135,7 @@
 
   </div>
 </div>
-<!-- message modal -->
+<!-- message modal, used for various things mostly error statuses -->
 <div id="messageModal" class="modal fade" role="dialog">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -149,7 +146,7 @@
     </div>
   </div>
 </div>
-<!-- info window modal -->
+<!-- info window modal for search history expanded info view -->
 <div id="impactModal" class="modal fade" role="dialog">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -168,9 +165,19 @@
     </div>
   </div>
 </div>
+<!-- storyline modal to show elevation change and provide dialogue -->
+<div id="escape-story" class="modal fade" role="dialog">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">ESCAPE STORY</h4>
+      </div>
+      <div class="modal-body" id="escapeStory"></div>
+    </div>
+  </div>
+</div>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="../static/messages.js" type="text/javascript"></script>
 <script src="../static/googlemap.js" type="text/javascript"></script>
 <script src="../static/mapstyles.js" type="text/javascript"></script>

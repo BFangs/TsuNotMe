@@ -1,3 +1,5 @@
+// style json for custom map styling, must be imported alongside googlemap.js
+
 var styles = [
   {
     "featureType": "administrative",

@@ -36,10 +36,10 @@ def get_points():
         message = "You're already at a safe location! If you want to climb even higher follow the route"
     else:
         message = "Hurry to safety! tik tok tik tok..."
-    answer = {"point_elevation": point.elevation,
+    answer = {"point_elevation": int(point.elevation),
               "latitude": point.latitude,
               "longitude": point.longitude,
-              "elevation": elevation,
+              "elevation": int(elevation),
               "travel_mode": travel_mode,
               "max_time": max_time,
               "message": message,

@@ -1,7 +1,7 @@
 # TsuNotMe
 If a tsunami hit San Francisco, where would you go? TsuNotMe helps find an escape route to the closest safe destination.
 
-![screenshot](https://github.com/BFangs/TsuNotMe/tree/master/static/img/screenshot.png)
+![screenshot](https://github.com/BFangs/TsuNotMe/blob/master/static/img/screenshot.png)
 ## Features
 Search using an elevation threshold, a starting location, a desired time frame, and a mode of travel. The closest destination over the elevation threshold will be selected from the database and a route will be displayed on the map. Login to save and view search history.
 ### Tech Stack

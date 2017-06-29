@@ -30,7 +30,7 @@ function initMap() {
         draggable: true,
         map: map,
         title: 'You are here!',
-        icon: '/static/face.png'
+        icon: '/static/img/face.png'
     });
     end_marker = new google.maps.Marker({
         position: San_Francisco,
@@ -38,7 +38,7 @@ function initMap() {
         map: map,
         visible: false,
         title: 'ESCAPE!',
-        icon: '/static/gps.png'
+        icon: '/static/img/gps.png'
     });
     google.maps.event.addListener(map, 'click', function(event) {
         updateMarker(event.latLng);
@@ -54,7 +54,7 @@ function initMap() {
         map: map,
         polylineOptions: {strokeColor: "black", strokeWeight: 5},
         markerOptions: {animation: "DROP",
-                        icon: '/static/gps.png'}
+                        icon: '/static/img/gps.png'}
     };
     directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
     }

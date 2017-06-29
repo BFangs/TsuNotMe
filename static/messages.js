@@ -8,8 +8,8 @@ function doMessage(result) {
     var message = result["message"];
     $("#messageBody").html(message);
     $('#messageModal').modal("show");
-    if (result["success"]) {
-        $("#loginbutton").hide();
+    if (result["success"] == 'True') {
+        $('#loginbutton').hide();
         $('#loggoutbutton').show();
     }
 }

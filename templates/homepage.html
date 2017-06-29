@@ -28,13 +28,16 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        <!-- for left side links, currently unused -->     
+        <!-- for left side links, currently unused -->
        </ul>
       <ul class="nav navbar-nav navbar-right">
         {% if "user_id" in session %}
         <li class="active tab" id="loggoutbutton"><a>LOGOUT <span class="sr-only">(current)</span></a></li>
         <li class="active tab" id="sidebarPointer"><a>SEARCH HISTORY <span class="sr-only">(current)</span></a></li>
+        <li class="active tab" data-toggle="modal" data-target="#loginModal" id="loginbutton" style='display: none;'><a>LOGIN/REGISTER</a></li>
         {% else %}
+        <li class="active tab" id="loggoutbutton" style='display: none;'><a>LOGOUT <span class="sr-only">(current)</span></a></li>
+        <li class="active tab" id="sidebarPointer" style='display: none;'><a>SEARCH HISTORY <span class="sr-only">(current)</span></a></li>
         <li class="active tab" data-toggle="modal" data-target="#loginModal" id="loginbutton"><a>LOGIN/REGISTER</a></li>
         {% endif %}
       </ul>

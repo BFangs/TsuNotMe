@@ -104,9 +104,11 @@ def login_user():
     nickname = request.form.get('nickname')
     response = {}
     check = User.check_user(email, password, nickname)
-    if check["id"]:
+    if check.get("id"):
         session["user_id"] = check["id"]
-        response["success"] = True
+        response["success"] = 'True'
+    else:
+        response["success"] = 'False'
     response["message"] = check["message"]
     return jsonify(response)
 

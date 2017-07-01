@@ -2,6 +2,7 @@ from jinja2 import StrictUndefined
 from flask import (Flask, session, render_template, request, jsonify)
 from flask_debugtoolbar import DebugToolbarExtension
 from model import connect_to_db, User, Search
+from gevent.wsgi import WSGIServer
 
 import os
 API_KEY = os.environ['googlekey']
@@ -127,5 +128,6 @@ if __name__ == "__main__":
     app.debug = True
     app.jinja_env.auto_reload = app.debug
     connect_to_db(app)
+    http_server = WSGIServer(('0.0.0.0', 5000), app)
+    http_server.serve_forever()
     DebugToolbarExtension(app)
-    app.run(port=5000, host='0.0.0.0')

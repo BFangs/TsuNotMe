@@ -106,21 +106,18 @@ def login_user():
     password = request.form.get('password').rstrip()
     salt = "safetyfirst"
     pword = hashlib.md5( salt + password ).hexdigest()
-    print pword
     nickname = request.form.get('nickname').rstrip()
     nickname = nickname.lower()
     response = {}
     check = User.check_user(email)
-    print check
     if check:
         if check.password == pword:
             session["user_id"] = str(check.user_id)
             response["success"] = 'True'
             response["message"] = "You've logged in!"
         else:
-            session["user_id"] = str(check.user_id)
-            response["success"] = 'True'
-            response["message"] = User.change_password(check.user_id, pword)
+            response["success"] = 'False'
+            response["message"] = "That was the wrong password!"
     else:
         new = User.new_user(email, pword, nickname)
         session["user_id"] = new["id"]

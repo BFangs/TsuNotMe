@@ -199,32 +199,31 @@ class User(db.Model):
                                                            self.password)
 
     @classmethod
-    def check_user(cls, email, password, nickname=None):
+    def check_user(cls, email, nickname=None):
         """checks if user is in databse"""
 
         try:
             result = cls.query.filter_by(email=email).one()
-            if result.password == password:
-                return {"id": result.user_id,
-                        "message": "You're now logged in! Congrats!"}
-            else:
-                return {"message": "That was the wrong password please try again"}
+            return result
         except:
-            user_id = cls.new_user(email, password, nickname)
-            return {"id": user_id,
-                    "message": "You're now registered! I've also logged you in :)"}
+            return None
 
     @classmethod
     def new_user(cls, email, password, nickname=None):
         """new user registration"""
-
         if nickname:
             user = cls(email=email, password=password, name=nickname)
         else:
             user = cls(email=email, password=password)
         db.session.add(user)
         db.session.commit()
-        return user.user_id
+        return {"id": user.user_id, "message": "You're now registered! I've also logged you in!"}
+
+    @classmethod
+    def change_password(cls, user_id, password):
+        person = cls.query.filter(cls.user_id == user_id).one()
+        person.password = password
+        return "You updated your password!"
 
     @classmethod
     def get_history(cls, user_id):

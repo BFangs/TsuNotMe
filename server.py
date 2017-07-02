@@ -1,5 +1,6 @@
 from jinja2 import StrictUndefined
 from flask import (Flask, session, render_template, request, jsonify)
+from flask_bcrypt import Bcrypt
 from flask_debugtoolbar import DebugToolbarExtension
 from model import connect_to_db, User, Search
 from gevent.wsgi import WSGIServer
@@ -8,6 +9,7 @@ import os
 API_KEY = os.environ['googlekey']
 
 app = Flask(__name__)
+bcrypt = Bcrypt(app)
 app.secret_key = "BOO"
 app.jinja_env.undefined = StrictUndefined
 
@@ -104,13 +106,23 @@ def login_user():
     password = request.form.get('password')
     nickname = request.form.get('nickname')
     response = {}
-    check = User.check_user(email, password, nickname)
-    if check.get("id"):
-        session["user_id"] = check["id"]
-        response["success"] = 'True'
+    check = User.check_user(email, nickname)
+    if check:
+        if bcrypt.check_password_hash(check.password, password):
+            session["user_id"] = str(check.user_id)
+            response["success"] = 'True'
+            response["message"] = "You've logged in!"
+        else:
+            session["user_id"] = str(check.user_id)
+            response["success"] = 'True'
+            response["message"] = "Your password was wrong!"
+            pw_hash = bcrypt.generate_password_hash(password)
+            User.change_password(check.user_id, pw_hash)
     else:
-        response["success"] = 'False'
-    response["message"] = check["message"]
+        pw_hash = bcrypt.generate_password_hash(password)
+        new = User.new_user(email, pw_hash, nickname)
+        session["user_id"] = new["id"]
+        response["message"] = new["message"]
     return jsonify(response)
 
 

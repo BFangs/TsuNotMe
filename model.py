@@ -199,9 +199,8 @@ class User(db.Model):
                                                            self.password)
 
     @classmethod
-    def check_user(cls, email, nickname=None):
+    def check_user(cls, email):
         """checks if user is in databse"""
-
         try:
             result = cls.query.filter_by(email=email).one()
             return result
@@ -223,6 +222,7 @@ class User(db.Model):
     def change_password(cls, user_id, password):
         person = cls.query.filter(cls.user_id == user_id).one()
         person.password = password
+        db.session.commit()
         return "You updated your password!"
 
     @classmethod
@@ -306,6 +306,7 @@ class Search(db.Model):
         time = int(duration) / 60
         search.travel_time = time
         search.travel_distance = length
+        db.session.commit()
         return "You updated your search!"  # % (search.u.name) need to handle when no user logged in
 
     @classmethod

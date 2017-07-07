@@ -34,9 +34,14 @@ function fillSidebar(result) {
     var response = result["response"];
     var history = result["history"];
     console.log(history);
-    for (var old of history) {
-        $("#sidebar-body").append('<li class="active" id="'+old["search_id"]+'"><button class="btn btn-default historybtn" type="button">Start: '+old["start_ele"]+' meters End: '+old["end_ele"]+' meters<br> Parameters: '+old["min_ele"]+' meters, '+old["max_time"]+' min, '+old["travel_mode"]+'<span class="sr-only">(current)</span></button></li>');
-        $("#"+old["search_id"]).data(old);
+    if (history != []) {
+      for (var old of history) {
+          $("#sidebar-body").append('<li class="active" id="'+old["search_id"]+'"><button class="btn btn-default historybtn" type="button">Start: '+old["start_ele"]+' meters End: '+old["end_ele"]+' meters<br> Parameters: '+old["min_ele"]+' meters, '+old["max_time"]+' min, '+old["travel_mode"]+'<span class="sr-only">(current)</span></button></li>');
+          $("#"+old["search_id"]).data(old);
+      }
+    } else {
+      $("#sidebar-body").html('<h3>No history to show!</h3>');
+      $("#sidebar-body").append('<p>Happy searching :)</p>');
     }
 }
 function loadSidebar(evt) {

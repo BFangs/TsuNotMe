@@ -34,6 +34,7 @@ def get_points():
     print latitude, longitude, elevation, min_height, max_time, travel_mode, user_id
     result = Search.new_search(latitude, longitude, user_id, min_height, max_time, travel_mode, elevation)
     point = result["point"]
+    session.setdefault("history", []).append(result["id"])
     if elevation > min_height:
         message = "You're already at a safe location! If you want to climb even higher follow the route"
     else:
@@ -57,21 +58,26 @@ def get_history():
     response = {'history': []}
     try:
         user_id = session["user_id"]
+        history = User.get_history(user_id)
     except:
-        user_id = 1
-    history = User.get_history(user_id)
-    for search in history:
-        thing = {"start_lat": search.a.latitude,
-                 "start_lng": search.a.longitude,
-                 "start_ele": int(search.a.elevation),
-                 "end_lat": search.p.latitude,
-                 "end_lng": search.p.longitude,
-                 "end_ele": int(search.p.elevation),
-                 "min_ele": search.min_ele,
-                 "max_time": search.max_time,
-                 "travel_mode": search.travel_mode,
-                 "search_id": search.search_id}
-        response['history'].append(thing)
+        try:
+            searches = session["history"]
+            history = Search.get_data(searches)
+        except:
+            history = None
+    if history:
+        for search in history:
+            thing = {"start_lat": search.a.latitude,
+                     "start_lng": search.a.longitude,
+                     "start_ele": int(search.a.elevation),
+                     "end_lat": search.p.latitude,
+                     "end_lng": search.p.longitude,
+                     "end_ele": int(search.p.elevation),
+                     "min_ele": search.min_ele,
+                     "max_time": search.max_time,
+                     "travel_mode": search.travel_mode,
+                     "search_id": search.search_id}
+            response['history'].append(thing)
     return jsonify(response)
 
 

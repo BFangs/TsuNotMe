@@ -310,6 +310,12 @@ class Search(db.Model):
         return "You updated your search!"  # % (search.u.name) need to handle when no user logged in
 
     @classmethod
+    def get_data(cls, searches):
+        """get search history just for session"""
+        history = cls.query.filter(cls.search_id.in_(searches)).all()
+        return history
+
+    @classmethod
     def delete_entry(cls, search_id):
         """deleting entry using search_id"""
 

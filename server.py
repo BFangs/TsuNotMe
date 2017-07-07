@@ -7,9 +7,10 @@ from gevent.wsgi import WSGIServer
 
 import os
 API_KEY = os.environ['googlekey']
+SALT = os.environ['tsunotme_salt']
 
 app = Flask(__name__)
-app.secret_key = "BOO"
+app.secret_key = "BOOOMSHAKALAKA"
 app.jinja_env.undefined = StrictUndefined
 
 
@@ -110,8 +111,7 @@ def login_user():
     email = request.form.get('email').rstrip()
     email = email.lower()
     password = request.form.get('password').rstrip()
-    salt = "safetyfirst"
-    pword = hashlib.md5( salt + password ).hexdigest()
+    pword = hashlib.md5( SALT + password ).hexdigest()
     nickname = request.form.get('nickname').rstrip()
     nickname = nickname.lower()
     response = {}
